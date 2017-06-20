@@ -44,6 +44,7 @@ module DestroyedAt
         destroy_associations
         self.class.unscoped.where(self.class.primary_key => id).update_all(destroyed_at: timestamp)
         @destroyed = true
+        @_trigger_destroy_callback = true
 
         next @destroyed unless ActiveRecord::VERSION::STRING >= '4.2'
         each_counter_cached_associations do |association|

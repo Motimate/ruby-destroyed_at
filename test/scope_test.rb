@@ -1,7 +1,7 @@
 require 'test_helper'
 
 describe 'Scopes' do
-  let(:post)     { Post.create! }
+  let(:post)       { Post.create! }
   let(:comment_1)  { post.comments.create! }
   let(:comment_2)  { post.comments.create! }
   let(:comment_3)  { Comment.create! }
@@ -54,7 +54,11 @@ describe 'Scopes' do
 
       before do
         post.destroy
-        comment_2.update(destroyed_at: post.destroyed_at - 1.hour)
+
+        Comment
+          .unscoped
+          .where(id: comment_2.id)
+          .update_all(destroyed_at: post.destroyed_at - 1.hour)
       end
 
       it 'returns all child records with a destroyed_at time that matches the passed in time' do

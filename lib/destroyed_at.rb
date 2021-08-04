@@ -97,22 +97,29 @@ module DestroyedAt
   end
 
   def _restore_associations
-    _reflections.select { |key, value| value.options[:dependent] == :destroy }.keys.each do |key|
-      assoc = association(key)
-      reload_association = false
-      if assoc.options[:through] && assoc.options[:dependent] == :destroy
-        assoc = association(assoc.options[:through])
-      end
-      assoc.association_scope.each do |r|
-        if r.respond_to?(:restore) && r.destroyed_at == self.destroyed_at
-          r.restore
-          reload_association = true
-        end
-      end
+    _reflections
+      .select { |_key, value| value.options[:dependent] == :destroy }
+      .keys
+      .each do |key|
+        assoc = association(key)
+        reload_association = false
 
-      if reload_association
+        if assoc.options[:through] && assoc.options[:dependent] == :destroy
+          assoc = association(assoc.options[:through])
+        end
+
+        #TODO: #association_scope is again a public method in Rails 6.1
+
+        assoc.send(:association_scope).each do |r|
+          next unless r.respond_to?(:restore) && r.destroyed_at == self.destroyed_at
+
+          r.restore
+          reload_association |= true
+        end
+
+        next unless reload_association
+
         assoc.reload
       end
-    end
   end
 end

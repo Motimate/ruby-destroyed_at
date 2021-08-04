@@ -5,8 +5,8 @@ describe 'destroying an activerecord instance' do
 
   it 'sets the timestamp it was destroyed at' do
     time = Time.now
+
     Timecop.freeze(time) do
-      post = Post.create
       post.destroy
       post.destroyed_at.must_equal time
     end
@@ -14,14 +14,18 @@ describe 'destroying an activerecord instance' do
 
   it 'does not delete the record' do
     post.destroy
+
     Post.all.must_be_empty
     Post.unscoped.load.wont_be_empty
   end
 
   it 'sets #destroyed?' do
+    post_id = post.id
+
     post.destroy
-    post.destroyed?.must_equal true
-    post = Post.unscoped.last
+
+    post = Post.unscoped.find(post_id)
+
     post.destroyed?.must_equal true
     post.restore
     post.destroyed?.must_equal false
@@ -110,11 +114,9 @@ end
 describe 'restoring an activerecord instance' do
   let(:author) { Author.create }
   let(:timestamp) { DateTime.current }
-  let(:post) { Post.create(:destroyed_at => timestamp) }
+  let(:post) { Post.create.tap(&:destroy) }
 
   it 'restores the record' do
-    Post.all.must_be_empty
-    post.reload
     post.restore
     post.destroyed_at.must_be_nil
     Post.all.wont_be_empty
@@ -156,48 +158,68 @@ describe 'restoring an activerecord instance' do
 
     post.reload
     post.restore
+
     Post.count.must_equal 1
     Like.count.must_equal 1
   end
 
   it 'restores a dependent has_many relation with DestroyedAt' do
-    Comment.create(:destroyed_at => timestamp, :post => post)
+    post = Post.create
+    comment = Comment.create(post: post)
+
+    comment.update_columns(destroyed_at: timestamp)
+    post.update_columns(destroyed_at: timestamp)
+
     Comment.count.must_equal 0
+
     post.reload
     post.restore
+
     Comment.count.must_equal 1
   end
 
   it 'does not restore a non-dependent relation with DestroyedAt' do
+    author.destroy
+
     Post.count.must_equal 0
     Author.count.must_equal 0
+
     post.reload
     post.restore
+
     Post.count.must_equal 1
     Author.count.must_equal 0
   end
 
   it 'restores a dependent through relation with DestroyedAt' do
-    commenter = Commenter.create
-    Comment.create(:post => post, :commenter => commenter, :destroyed_at => timestamp)
+    post = Post.create
+    commenter = Commenter.create!
+    comment = Comment.create!(:post => post, :commenter => commenter)
+
+    comment.update_columns(destroyed_at: timestamp)
+    post.update_columns(destroyed_at: timestamp)
 
     Commenter.count.must_equal 1
     Comment.count.must_equal 0
+
     post.reload
     post.restore
+
     Commenter.count.must_equal 1
     Comment.count.must_equal 1
   end
 
   it 'restores only the dependent relationships destroyed when the parent was destroyed' do
     post = Post.create
-    comment_1 = Comment.create(post: post, destroyed_at: Time.now - 1.day)
+    comment_1 = Comment.create(post: post)
     comment_2 = Comment.create(post: post)
+
+    comment_1.update_columns(destroyed_at: Time.now - 1.day)
+
     post.destroy
-    post.reload # We have to reload the object before restoring in the test
-                # because the in memory object has greater precision than
-                # the database records
+    post.reload
     post.restore
+
     post.comments.wont_include comment_1
     post.comments.must_include comment_2
   end

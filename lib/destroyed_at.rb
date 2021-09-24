@@ -80,7 +80,11 @@ module DestroyedAt
   end
 
   def persisted?
-    !new_record? && destroyed_at.present? || super
+    if has_attribute?(:destroyed_at)
+      !new_record? && destroyed_at.present? || super
+    else
+      super
+    end
   end
 
   def delete

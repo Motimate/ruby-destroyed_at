@@ -17,7 +17,7 @@ Gem::Specification.new do |spec|
   spec.test_files    = spec.files.grep(%r{^(test|spec|features)/})
   spec.require_paths = ["lib"]
 
-  spec.required_ruby_version = '~> 3.3'
+  spec.required_ruby_version = '~> 3.4'
 
   spec.add_runtime_dependency "activerecord", "~> 7.1.5.1"
   spec.add_runtime_dependency "actionpack", "~> 7.1.5.1"

@@ -94,6 +94,12 @@ module DestroyedAt
 
   private
 
+  def each_counter_cached_associations
+      _reflections.each do |name, reflection|
+        yield association(name.to_sym) if reflection.belongs_to? && reflection.counter_cache_column
+      end
+    end
+
   def _set_destruction_state
     @destroyed = destroyed_at.present? if has_attribute?(:destroyed_at)
     # Don't stop the other callbacks from running
